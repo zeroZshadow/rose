@@ -16,7 +16,7 @@ const (
 // all functions altering the room or dealing with the room will have to be private.
 // With the exception to the functions passing the events along
 type RoomBase struct {
-	ID    uint64
+	ID    RoomID
 	Users map[User]struct{}
 	Owner User
 
@@ -28,7 +28,7 @@ type RoomBase struct {
 }
 
 // NewRoomBase returns a new RoomBase
-func NewRoomBase(id uint64, tickrate time.Duration) (room *RoomBase) {
+func NewRoomBase(id RoomID, tickrate time.Duration) (room *RoomBase) {
 	// Create the new room
 	room = &RoomBase{
 		ID:    id,

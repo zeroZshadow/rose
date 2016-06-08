@@ -6,16 +6,15 @@ import (
 
 // UserBase provides message sending
 type UserBase struct {
-	ID uint64
+	ID UserID
 
 	// Framework things
 	pump *MessagePump
 }
 
 // NewUserBase return a new UserBase
-func NewUserBase(id uint64, pump *MessagePump) *UserBase {
+func NewUserBase(pump *MessagePump) *UserBase {
 	return &UserBase{
-		ID:   id,
 		pump: pump,
 	}
 }

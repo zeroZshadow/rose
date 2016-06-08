@@ -7,6 +7,9 @@ import (
 	"github.com/golang/protobuf/proto"
 )
 
+// RoomID unique room id type
+type RoomID uint64
+
 // Room interface describing a game room
 type Room interface {
 	// Overwrittables
