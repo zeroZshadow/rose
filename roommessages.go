@@ -1,21 +1,23 @@
 package rose
 
 // roomMessage Interface for internal room messages
-type roomMessage interface{
+type roomMessage interface {
 	roomMessage()
 }
 
 // userJoining user joins the room
 type userJoining struct {
-	user    User
+	user User
 }
-func (userJoining)  roomMessage() {}
+
+func (userJoining) roomMessage() {}
 
 // userLeaving user leaves the room
 type userLeaving struct {
-	user    User
+	user User
 }
-func (userLeaving)  roomMessage() {}
+
+func (userLeaving) roomMessage() {}
 
 // userMessage messages from user that needs to be parsed by the room
 type userMessage struct {
@@ -24,4 +26,4 @@ type userMessage struct {
 	data    []byte
 }
 
-func (userMessage)  roomMessage() {}
+func (userMessage) roomMessage() {}

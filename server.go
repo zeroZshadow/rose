@@ -141,7 +141,7 @@ func (serv *Server) ServeHTTP(writer http.ResponseWriter, request *http.Request)
 
 // Connect connect to target websocket and handle the connection to a user
 func (serv *Server) Connect(address string, constructor UserConstructor) (User, error) {
-	// Connect the adress, then make a pump with the given user constructor
+	// Connect the addresss, then make a pump with the given user constructor
 	ws, _, err := websocket.DefaultDialer.Dial(address, nil)
 	if err != nil {
 		return nil, err

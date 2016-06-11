@@ -60,7 +60,7 @@ func (room *RoomBase) RemoveUser(user User) {
 	delete(room.Users, user)
 
 	// If the room is claimed by this user, transfer the claim
-	// If noone can pickup the claim, destroy the room
+	// If no one can pickup the claim, destroy the room
 	if room.Owner == user {
 		if len(room.Users) > 0 {
 			// XXX: Hack to get first key from map

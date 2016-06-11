@@ -66,7 +66,7 @@ func (pump *MessagePump) readPump() {
 		return pump.ws.SetReadDeadline(time.Now().Add(pongWait))
 	})
 
-	// Loop to read messages untill we need to exit
+	// Loop to read messages until we need to exit
 	for {
 		// Read a message of the websocket, blocking
 		_, data, err := pump.ws.ReadMessage()

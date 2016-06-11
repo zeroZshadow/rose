@@ -24,7 +24,7 @@ type Room interface {
 	Base() *RoomBase
 }
 
-// RoomRun a goroutine. Runs the room code untill destruction of the room
+// RoomRun a goroutine. Runs the room code until destruction of the room
 func roomRun(room Room) {
 	// Make sure we clean up
 	defer room.Cleanup()
