@@ -10,17 +10,22 @@ import (
 )
 
 const (
-	writeWait      = 10 * time.Second
-	pongWait       = 60 * time.Second
-	pingPeriod     = (pongWait * 9) / 10
+	// writeWait amount of time that can pass after a packet write times out.
+	writeTimeout = 10 * time.Second
+	// pongWait amount of time that can pass after a packet read times out (used for ping).
+	readTimeout = 10 * time.Second
+	// pingPeriod time between ping messages.
+	pingPeriod = (readTimeout * 9) / 10
+	// maxMessageSize maximum packet size in bytes.
 	maxMessageSize = 4096
-	maxMessages    = 8
+	// maxMessages maximum messages that can be queued for sending before blocking.
+	maxMessages = 8
 )
 
 // MessageType message id type
 type MessageType uint64
 
-// MessagePump pump used for reading and writing on a websocket
+// MessagePump pump used for reading and writing on a websocket.
 type MessagePump struct {
 	server *Server
 	user   User
@@ -61,9 +66,9 @@ func NewMessagePump(constructor UserConstructor, ws *websocket.Conn, server *Ser
 func (pump *MessagePump) readPump() {
 	// Setup read pump
 	pump.ws.SetReadLimit(maxMessageSize)
-	pump.ws.SetReadDeadline(time.Now().Add(pongWait))
+	pump.ws.SetReadDeadline(time.Now().Add(readTimeout))
 	pump.ws.SetPongHandler(func(string) error {
-		return pump.ws.SetReadDeadline(time.Now().Add(pongWait))
+		return pump.ws.SetReadDeadline(time.Now().Add(readTimeout))
 	})
 
 	// Loop to read messages until we need to exit
@@ -97,7 +102,7 @@ func (pump *MessagePump) readPump() {
 
 // write writes a message with the given message type and payload.
 func (pump *MessagePump) writeRaw(mt int, payload []byte) error {
-	pump.ws.SetWriteDeadline(time.Now().Add(writeWait))
+	pump.ws.SetWriteDeadline(time.Now().Add(writeTimeout))
 	return pump.ws.WriteMessage(mt, payload)
 }
 

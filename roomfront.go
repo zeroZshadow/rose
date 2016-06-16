@@ -34,7 +34,7 @@ func (front *RoomFront) QueueRemoveUser(user User) {
 	front.internal.internalMessage(msg)
 }
 
-// PushMessage pushes a messages on the room's messages queueu
+// PushMessage pushes a messages on the room's messages queue.
 func (front *RoomFront) PushMessage(user User, msgType MessageType, message []byte) {
 	msg := userMessage{
 		user:    user,

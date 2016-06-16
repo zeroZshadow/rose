@@ -6,15 +6,15 @@ import (
 	"github.com/golang/protobuf/proto"
 )
 
-// TODO Maby var instead? so it's changeable
+// TODO Maby through config instead? so it's changeable.
 const (
+	// maxRoomMessages amount of internal messages that can be queued for handling before blocking.
 	maxRoomMessages = 20
-	//updateRate      = time.Second / 60
 )
 
-// RoomBase will have to be concurrent
-// all functions altering the room or dealing with the room will have to be private.
-// With the exception to the functions passing the events along
+// RoomBase will have to be concurrent.
+// All functions altering the room or dealing with the room will have to be private.
+// With the exception to the functions passing the events along.
 type RoomBase struct {
 	ID    RoomID
 	Users map[User]struct{}
@@ -27,7 +27,7 @@ type RoomBase struct {
 	exit          chan bool
 }
 
-// NewRoomBase returns a new RoomBase
+// NewRoomBase returns a new RoomBase.
 func NewRoomBase(id RoomID, tickrate time.Duration) (room *RoomBase) {
 	// Create the new room
 	room = &RoomBase{

@@ -10,9 +10,9 @@ import (
 // RoomID unique room id type
 type RoomID uint64
 
-// Room interface describing a game room
+// Room interface describing a game room.
 type Room interface {
-	// Overwrittables
+	// Overwritable
 	Tick()
 	AddUser(User)
 	RemoveUser(User)
@@ -24,12 +24,12 @@ type Room interface {
 	Base() *RoomBase
 }
 
-// RoomRun a goroutine. Runs the room code until destruction of the room
+// roomRun a goroutine. Runs the room code until destruction of the room
 func roomRun(room Room) {
 	// Make sure we clean up
 	defer room.Cleanup()
 
-	// Setup crash recoverty
+	// Set up crash recovery
 	defer func() {
 		if r := recover(); r != nil {
 			//TODO Move to handler that is setable from the outside!

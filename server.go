@@ -37,8 +37,8 @@ func New() *Server {
 	}
 
 	// Disable origin check
-	//DEBUG
-	//TODO: change for deployment
+	// DEBUG
+	// TODO: change for deployment
 	upgrader.CheckOrigin = func(r *http.Request) bool {
 		return true
 	}
