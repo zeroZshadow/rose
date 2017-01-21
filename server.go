@@ -8,9 +8,9 @@ import (
 	"strconv"
 	"sync"
 
-	"github.com/gorilla/websocket"
-	"github.com/hydrogen18/stoppableListener"
 	"log"
+
+	"github.com/gorilla/websocket"
 )
 
 // PacketHandler handle incoming packet
@@ -24,12 +24,12 @@ type Server struct {
 	upgrader         websocket.Upgrader
 	userConstructors map[string]UserConstructor
 	listenWaitGroup  sync.WaitGroup
-	listener         *stoppableListener.StoppableListener
-	log              log.Logger
+	log              *log.Logger
+	listener         net.Listener
 }
 
 // New create new server
-func New() *Server {
+func New(logger *log.Logger) *Server {
 	// Create upgrader
 	upgrader := websocket.Upgrader{
 		ReadBufferSize:  1024,
@@ -37,16 +37,24 @@ func New() *Server {
 	}
 
 	// Disable origin check
-	// DEBUG
 	// TODO: change for deployment
 	upgrader.CheckOrigin = func(r *http.Request) bool {
 		return true
 	}
 
-	return &Server{
+	if logger == nil {
+		logger = &log.Logger{}
+	}
+
+	server := &Server{
 		upgrader:         upgrader,
 		userConstructors: make(map[string]UserConstructor),
+		log:              logger,
 	}
+
+	initializeLobby(server)
+
+	return server
 }
 
 // Serve Setup the listener and listen
@@ -56,12 +64,7 @@ func (serv *Server) Serve(address string) error {
 	if err != nil {
 		return err
 	}
-
-	// Create stopable listener
-	listener, err := stoppableListener.New(ls)
-	if err != nil {
-		return err
-	}
+	serv.listener = ls
 
 	// Create http server with router
 	httpserver := http.Server{}
@@ -70,9 +73,8 @@ func (serv *Server) Serve(address string) error {
 	serv.listenWaitGroup.Add(1)
 	go func() {
 		defer serv.listenWaitGroup.Done()
-		err := httpserver.Serve(listener)
-		if err != nil {
-			log.Printf("Error while Serving HTTP: %s\n", err.Error())
+		if err := httpserver.Serve(ls); err != nil {
+			log.Printf("Error while Serving: %s\n", err.Error())
 		}
 	}()
 
@@ -82,14 +84,12 @@ func (serv *Server) Serve(address string) error {
 
 	// Create goroutine to ensure clean exit
 	go func() {
-		select {
-		case <-stop:
-			listener.Stop()
+		<-stop
+		err := httpserver.Shutdown(nil)
+		if err != nil {
+			log.Printf("Error while Shutting down: %s\n", err.Error())
 		}
 	}()
-
-	// Everything went right, save listener
-	serv.listener = listener
 
 	return nil
 }
@@ -101,7 +101,7 @@ func (serv *Server) Wait() {
 
 // Port Get the port the server is on
 func (serv *Server) Port() (uint64, error) {
-	address := serv.listener.TCPListener.Addr().String()
+	address := serv.listener.Addr().String()
 	_, port, err := net.SplitHostPort(address)
 	if err != nil {
 		return 0, err

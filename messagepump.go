@@ -66,7 +66,11 @@ func NewMessagePump(constructor UserConstructor, ws *websocket.Conn, server *Ser
 func (pump *MessagePump) readPump() {
 	// Setup read pump
 	pump.ws.SetReadLimit(maxMessageSize)
-	pump.ws.SetReadDeadline(time.Now().Add(readTimeout))
+	if err := pump.ws.SetReadDeadline(time.Now().Add(readTimeout)); err != nil {
+		pump.server.log.Println(err)
+		return
+	}
+
 	pump.ws.SetPongHandler(func(string) error {
 		return pump.ws.SetReadDeadline(time.Now().Add(readTimeout))
 	})
@@ -102,7 +106,11 @@ func (pump *MessagePump) readPump() {
 
 // write writes a message with the given message type and payload.
 func (pump *MessagePump) writeRaw(mt int, payload []byte) error {
-	pump.ws.SetWriteDeadline(time.Now().Add(writeTimeout))
+	err := pump.ws.SetWriteDeadline(time.Now().Add(writeTimeout))
+	if err != nil {
+		return err
+	}
+
 	return pump.ws.WriteMessage(mt, payload)
 }
 
@@ -141,30 +149,47 @@ writeloop:
 	pump.Connected = false
 	pump.lock.Unlock()
 
-	// Something went wrong while writing so disconnect
+	// Close connection
 	pingTicker.Stop()
-	pump.ws.Close()
+
+	if err := pump.ws.Close(); err != nil {
+		pump.server.log.Println(err)
+	}
 }
 
 // SendMessage schedule message to be send
 func (pump *MessagePump) SendMessage(messageType MessageType, pb proto.Message) error {
 	// Create buffer to write to with the calculated size required
 	messageID := uint64(messageType)
-	typebuf := make([]byte, 0, proto.SizeVarint(messageID)+proto.Size(pb))
 
+	// TODO Stop constantly making buffers
+	typebuf := make([]byte, 0, proto.SizeVarint(messageID)+proto.Size(pb))
 	response := proto.NewBuffer(typebuf)
-	response.EncodeVarint(messageID)
-	err := response.Marshal(pb)
-	if err != nil {
+
+	// Serialize
+	if err := response.EncodeVarint(messageID); err != nil {
+		return err
+	}
+	if err := response.Marshal(pb); err != nil {
 		return err
 	}
 
 	// Send type prefixed message
-	pump.lock.RLock()
-	if pump.Connected {
-		pump.outgoing <- response.Bytes()
+writeLoop:
+	for {
+		pump.lock.Lock()
+		if !pump.Connected {
+			break writeLoop
+		}
+
+		select {
+		case pump.outgoing <- response.Bytes():
+			break writeLoop
+		default:
+		}
+		pump.lock.Unlock()
 	}
-	pump.lock.RUnlock()
+	pump.lock.Unlock()
 
 	return nil
 }
@@ -177,5 +202,4 @@ func (pump *MessagePump) Disconnect() {
 		pump.outgoing <- nil
 	}
 	pump.lock.Unlock()
-	pump.user.OnDisconnect(nil)
 }

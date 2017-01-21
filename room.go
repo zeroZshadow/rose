@@ -17,12 +17,15 @@ type Room interface {
 	AddUser(User)
 	RemoveUser(User)
 	HandleMessage(User, MessageType, []byte)
-	internalMessage(roomMessage)
 	Broadcast(MessageType, proto.Message)
 	BroadcastExcluded(MessageType, proto.Message, User)
 	Cleanup()
 	Base() *RoomBase
 }
+
+// Action to run on the room's goroutine
+// This can be used to interact with the rooms internals
+type Action func(Room)
 
 // roomRun a goroutine. Runs the room code until destruction of the room
 func roomRun(room Room) {
@@ -45,31 +48,12 @@ func roomRun(room Room) {
 
 	// Start processing room
 	for !base.destroying {
-		// Check for exit first
 		select {
-		case <-base.exit:
-			// Die
-			break
-		default:
-			// Handle messages or tick
-			select {
-			case <-base.ticker.C:
-				room.Tick()
-				runtime.Gosched()
-			case message := <-base.internalQueue:
-				handleMessage(room, message)
-			}
+		case <-base.ticker.C:
+			room.Tick()
+			runtime.Gosched()
+		case action := <-base.actionQueue:
+			action(room)
 		}
-	}
-}
-
-func handleMessage(room Room, message roomMessage) {
-	switch m := message.(type) {
-	case userMessage:
-		room.HandleMessage(m.user, m.msgType, m.data)
-	case userJoining:
-		room.AddUser(m.user)
-	case userLeaving:
-		room.RemoveUser(m.user)
 	}
 }

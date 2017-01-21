@@ -6,10 +6,10 @@ import (
 	"github.com/golang/protobuf/proto"
 )
 
-// TODO Maby through config instead? so it's changeable.
+// TODO Maybe through a config instead? so it's changeable.
 const (
-	// maxRoomMessages amount of internal messages that can be queued for handling before blocking.
-	maxRoomMessages = 20
+	// maxRoomActions amount of internal actions that can be queued for handling before blocking.
+	maxRoomActions = 20
 )
 
 // RoomBase will have to be concurrent.
@@ -20,27 +20,25 @@ type RoomBase struct {
 	Users map[User]struct{}
 	Owner User
 
-	internalQueue chan roomMessage
-	tickrate      time.Duration
-	ticker        *time.Ticker
-	destroying    bool
-	exit          chan bool
+	actionQueue chan Action
+	tickrate    time.Duration
+	ticker      *time.Ticker
+	destroying  bool
 }
 
 // NewRoomBase returns a new RoomBase.
-func NewRoomBase(id RoomID, tickrate time.Duration) (room *RoomBase) {
+func NewRoomBase(id RoomID, tickrate time.Duration) *RoomBase {
 	// Create the new room
-	room = &RoomBase{
+	room := &RoomBase{
 		ID:    id,
 		Users: make(map[User]struct{}),
 
-		internalQueue: make(chan roomMessage, maxRoomMessages),
-		tickrate:      tickrate,
-		ticker:        time.NewTicker(tickrate),
-		exit:          make(chan bool),
+		actionQueue: make(chan Action, maxRoomActions),
+		tickrate:    tickrate,
+		ticker:      time.NewTicker(tickrate),
 	}
 
-	return
+	return room
 }
 
 // AddUser adds a user to the room
@@ -60,7 +58,6 @@ func (room *RoomBase) RemoveUser(user User) {
 	delete(room.Users, user)
 
 	// If the room is claimed by this user, transfer the claim
-	// If no one can pickup the claim, destroy the room
 	if room.Owner == user {
 		if len(room.Users) > 0 {
 			// XXX: Hack to get first key from map
@@ -69,9 +66,8 @@ func (room *RoomBase) RemoveUser(user User) {
 				break
 			}
 		} else {
-			// Remove owner, mark from destruction
+			// Remove owner
 			room.Owner = nil
-			room.destroying = true
 		}
 	}
 }
@@ -80,16 +76,12 @@ func (room *RoomBase) RemoveUser(user User) {
 func (room *RoomBase) Cleanup() {
 	// Cleanup gracefully
 	room.ticker.Stop()
+	close(room.actionQueue)
 }
 
 // Base base class for room
 func (room *RoomBase) Base() *RoomBase {
 	return room
-}
-
-// internalMessage push internal room message on queue
-func (room *RoomBase) internalMessage(message roomMessage) {
-	room.internalQueue <- message
 }
 
 // Broadcast send a message to all users in the room
